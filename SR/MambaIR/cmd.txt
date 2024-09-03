@@ -1,0 +1,5 @@
+python3.9 -m torch.distributed.launch --nproc_per_node=1 --master_port=1234 basicsr/train.py -opt options/train/train_MambaIR_SR_x2.yml --launcher pytorch
+
+
+新版本
+torchrun --nproc_per_node=1 --master_port=1234 basicsr/train.py -opt options/train_MambaIR_x4.yml --launcher pytorch

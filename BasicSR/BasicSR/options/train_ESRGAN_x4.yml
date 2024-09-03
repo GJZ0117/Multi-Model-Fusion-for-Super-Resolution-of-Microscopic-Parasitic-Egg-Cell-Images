@@ -1,0 +1,129 @@
+name: ESRGAN_x4
+model_type: ESRGANModel
+scale: 4
+num_gpu: 1  # set num_gpu: 0 for cpu mode
+manual_seed: 0
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: train_dataset
+    type: PairedImageDataset
+    dataroot_gt: /home/SR/src/BasicSR/datasets/images/train/HR
+    dataroot_lq: /home/SR/src/BasicSR/datasets/images/train/LR
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+
+    gt_size: 256  # Ensure this matches the expected input size of the discriminator
+    use_hflip: true
+    use_rot: true
+
+    # data loader
+    num_worker_per_gpu: 2
+    batch_size_per_gpu: 16
+    dataset_enlarge_ratio: 10
+    prefetch_mode: ~
+
+  val:
+    name: val_dataset
+    type: PairedImageDataset
+    dataroot_gt: /home/SR/src/BasicSR/datasets/images/val/HR
+    dataroot_lq: /home/SR/src/BasicSR/datasets/images/val/LR  # This should point to the LR images
+    io_backend:
+      type: disk
+
+# network structures
+network_g:
+  type: RRDBNet
+  num_in_ch: 3
+  num_out_ch: 3
+  num_feat: 64
+  num_block: 23
+
+network_d:
+  type: VGGStyleDiscriminator
+  num_in_ch: 3
+  num_feat: 64
+  input_size: 256  # Ensure discriminator expects the correct input size
+
+# path
+path:
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: ~
+
+# training settings
+train:
+  ema_decay: 0.999
+  optim_g:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+  optim_d:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [25000, 50000, 100000, 150000]
+    # milestones: [50000, 100000, 200000, 300000]
+    gamma: 0.5
+
+  total_iter: 200000
+  # total_iter: 400000
+  warmup_iter: -1  # no warm up
+
+  # losses
+  pixel_opt:
+    type: L1Loss
+    loss_weight: !!float 1e-2
+    reduction: mean
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights:
+      'conv5_4': 1  # before relu
+    vgg_type: vgg19
+    use_input_norm: true
+    range_norm: false
+    perceptual_weight: 1.0
+    style_weight: 0
+    criterion: l1
+  gan_opt:
+    type: GANLoss
+    gan_type: vanilla
+    real_label_val: 1.0
+    fake_label_val: 0.0
+    loss_weight: !!float 5e-3
+
+  net_d_iters: 1
+  net_d_init_iters: 0
+
+# validation settings
+val:
+  val_freq: !!float 5e3
+  save_img: true
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: false
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 5e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500
+

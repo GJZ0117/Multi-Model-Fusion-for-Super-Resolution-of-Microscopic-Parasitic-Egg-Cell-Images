@@ -1,0 +1,51 @@
+# SwinIR 测试配置文件
+name: SwinIR_SRx4_test
+model_type: SwinIRModel
+scale: 4
+num_gpu: 1  # 设置为 0 使用 CPU 模式
+manual_seed: 0
+
+# 数据集设置
+datasets:
+  test_1:  # 第一个测试数据集
+    name: test_dataset
+    type: PairedImageDataset
+    dataroot_gt: /home/BasicSR/src/BasicSR/datasets/images/test/HR
+    dataroot_lq: /home/BasicSR/src/BasicSR/datasets/images/test/LR
+    io_backend:
+      type: disk
+
+# 网络结构
+network_g:
+  type: SwinIR
+  upscale: 4
+  in_chans: 3
+  img_size: 48
+  window_size: 8
+  img_range: 1.0
+  depths: [6, 6, 6, 6, 6, 6]
+  embed_dim: 180
+  num_heads: [6, 6, 6, 6, 6, 6]
+  mlp_ratio: 2
+  upsampler: 'pixelshuffle'
+  resi_connection: '1conv'
+
+# 路径设置
+path:
+  pretrain_network_g:  /home/BasicSR/src/BasicSR/experiments/SwinIR_SRx4/models/net_g_latest.pth 
+  strict_load_g: true
+
+# 验证设置
+val:
+  save_img: true  # 是否保存图片
+  suffix: ~  # 保存图片的后缀，如果为空，则使用实验名称
+
+  metrics:  # 评价指标
+    psnr:  # 指标名称，可自定义
+      type: calculate_psnr
+      crop_border: 4  # 裁剪边界
+      test_y_channel: false  # 是否在 Y 通道上测试
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: false
